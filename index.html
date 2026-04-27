@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OrtogràfiCat</title>
+  <style>
+    :root {
+      --bg: #f6faf6;
+      --card: #ffffff;
+      --text: #16301f;
+      --muted: #61746a;
+      --primary: #2e7d32;
+      --primary-2: #4caf50;
+      --border: #d7e3d8;
+      --danger: #c62828;
+      --warning: #ef6c00;
+      --shadow: 0 10px 24px rgba(20, 50, 30, 0.08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); }
+    button, input, select { font: inherit; }
+    .app { min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10;
+    }
+    .brand { font-weight: 800; font-size: 1.3rem; }
+    .top-actions { display: flex; gap: 10px; align-items: center; }
+    .container { width: min(980px, calc(100% - 24px)); margin: 18px auto 28px; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 18px;
+    }
+    .hero { display: grid; gap: 12px; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 1.8rem; }
+    h2 { font-size: 1.35rem; }
+    .muted { color: var(--muted); }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .space { height: 14px; }
+    .btn {
+      border: 0; background: var(--primary); color: white; padding: 12px 16px; border-radius: 14px;
+      cursor: pointer; font-weight: 700; transition: .18s transform, .18s opacity, .18s background;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn.secondary { background: white; color: var(--text); border: 1px solid var(--border); }
+    .btn.ghost { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+    .btn.danger { background: var(--danger); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px;
+      border: 1px solid var(--border); background: white; font-weight: 600;
+    }
+    .grid { display: grid; gap: 14px; }
+    .grid.profiles { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+    .grid.worlds, .grid.levels { grid-template-columns: 1fr; }
+    .profile-card, .world-card, .level-card {
+      display: grid; gap: 12px; padding: 16px; border-radius: 18px; background: white; border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .profile-head, .world-head, .level-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .avatar {
+      width: 62px; height: 62px; display: grid; place-items: center; font-size: 1.8rem;
+      border-radius: 50%; background: #eaf5ea; border: 1px solid var(--border);
+    }
+    .active-badge { color: var(--primary); font-weight: 800; }
+    .locked { opacity: .62; }
+    .stats { display: flex; gap: 10px; flex-wrap: wrap; }
+    .world-emoji, .flag { font-size: 1.7rem; }
+    .actions-inline { display: flex; gap: 8px; flex-wrap: wrap; }
+    .activity-card { padding: 20px; }
+    .question { font-size: 1.45rem; font-weight: 800; line-height: 1.35; }
+    .options { display: grid; gap: 10px; margin-top: 18px; }
+    .option-btn {
+      width: 100%; text-align: left; background: white; color: var(--text); border: 1px solid var(--border);
+      padding: 14px 16px; border-radius: 14px; cursor: pointer; font-weight: 600;
+    }
+    .option-btn:hover { border-color: var(--primary); }
+    .progressbar { width: 100%; height: 12px; border-radius: 999px; background: #e7f1e8; overflow: hidden; }
+    .progressbar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-2)); }
+    .feedback-good { color: var(--primary); font-weight: 800; }
+    .feedback-bad { color: var(--warning); font-weight: 800; }
+    .stars { letter-spacing: 2px; }
+    .empty { text-align: center; padding: 30px 18px; }
+    .hidden { display: none !important; }
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(10, 24, 12, 0.42); display: none;
+      align-items: center; justify-content: center; padding: 18px; z-index: 20;
+    }
+    .modal-backdrop.active { display: flex; }
+    .modal { width: min(520px, 100%); background: white; border-radius: 20px; padding: 18px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+    .field { display: grid; gap: 8px; }
+    input[type="text"] {
+      width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); outline: none;
+    }
+    input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(46,125,50,.12); }
+    .avatar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .avatar-choice {
+      border: 1px solid var(--border); border-radius: 16px; padding: 12px; text-align: center; cursor: pointer; background: white;
+      font-size: 1.6rem;
+    }
+    .avatar-choice.selected { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(46,125,50,.12); }
+    .error-text { color: var(--danger); font-size: 0.95rem; font-weight: 700; }
+    .summary { display: grid; gap: 10px; }
+    @media (max-width: 640px) {
+      .container { width: calc(100% - 16px); }
+      .topbar { padding: 14px 12px; }
+      .avatar-grid { grid-template-columns: repeat(2, 1fr); }
+      .question { font-size: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">OrtogràfiCat</div>
+    <div class="top-actions">
+      <button id="backBtn" class="btn secondary hidden">← Enrere</button>
+      <button id="homeBtn" class="btn secondary hidden">Perfils</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <section id="screen-profiles" class="screen active"></section>
+    <section id="screen-map" class="screen"></section>
+    <section id="screen-levels" class="screen"></section>
+    <section id="screen-game" class="screen"></section>
+    <section id="screen-results" class="screen"></section>
+  </div>
+</div>
+
+<div id="profileModal" class="modal-backdrop">
+  <div class="modal">
+    <div class="row" style="justify-content:space-between;align-items:center;">
+      <h3 id="profileModalTitle">Nou perfil</h3>
+      <button id="closeProfileModal" class="btn secondary">Tancar</button>
+    </div>
+    <div class="space"></div>
+    <div class="field">
+      <label for="profileName">Nom del perfil</label>
+      <input id="profileName" type="text" maxlength="20" placeholder="Escriu un nom" />
+      <div id="profileNameError" class="error-text hidden"></div>
+    </div>
+    <div class="space"></div>
+    <div class="field">
+      <label>Tria un avatar</label>
+      <div id="avatarGrid" class="avatar-grid"></div>
+    </div>
+    <div class="space"></div>
+    <div class="actions-inline" style="justify-content:flex-end;">
+      <button id="cancelProfileModal" class="btn secondary">Cancel·lar</button>
+      <button id="saveProfileBtn" class="btn">Desar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const STORAGE_KEYS = {
+    profiles: 'ortograficat_profiles',
+    activeProfileId: 'ortograficat_active_profile_id',
+    progressPrefix: 'ortograficat_progress_'
+  };
+
+  const AVATARS = {
+    drac_blau: '🐉',
+    guineu_taronja: '🦊',
+    mussol_lila: '🦉',
+    lleo_groc: '🦁',
+    granota_verda: '🐸',
+    robot_gris: '🤖'
+  };
+
+  const WORLDS = [
+    {
+      id: 'world_bv', order: 1, title: 'La Vall de la B i la V', emoji: '🌿',
+      description: 'Aprèn a distingir i escriure paraules amb b i v.',
+      levelIds: ['bv_1','bv_2','bv_3','bv_4','bv_5'], finalChallengeLevelId: 'bv_final'
+    },
+    {
+      id: 'world_gj', order: 2, title: 'La Selva de la G i la J', emoji: '🌴',
+      description: 'Practica paraules freqüents amb g i j.',
+      levelIds: ['gj_1','gj_2','gj_3','gj_4','gj_5'], finalChallengeLevelId: 'gj_final'
+    },
+    {
+      id: 'world_accents', order: 3, title: 'El Desert dels Accents', emoji: '🏜️',
+      description: 'Descobreix i practica accents bàsics en paraules habituals.',
+      levelIds: ['acc_1','acc_2','acc_3','acc_4','acc_5'], finalChallengeLevelId: 'acc_final'
+    }
+  ];
+
+  const LEVELS = [
+    // B/V
+    { id:'bv_1', worldId:'world_bv', order:1, title:'Paraules bàsiques', instructions:'Completa i tria la forma correcta.', activityIds:['bv_1_a1','bv_1_a2','bv_1_a3'], isFinalChallenge:false },
+    { id:'bv_2', worldId:'world_bv', order:2, title:'Més vocabulari habitual', instructions:'Continua practicant paraules amb b i v.', activityIds:['bv_2_a1','bv_2_a2','bv_2_a3'], isFinalChallenge:false },
+    { id:'bv_3', worldId:'world_bv', order:3, title:'B i V en frases curtes', instructions:'Aplica b i v dins de frases simples.', activityIds:['bv_3_a1','bv_3_a2','bv_3_a3'], isFinalChallenge:false },
+    { id:'bv_4', worldId:'world_bv', order:4, title:'Detectem errors', instructions:'Localitza errors ortogràfics.', activityIds:['bv_4_a1','bv_4_a2','bv_4_a3'], isFinalChallenge:false },
+    { id:'bv_5', worldId:'world_bv', order:5, title:'Barreja final', instructions:'Consolida tot el que has après.', activityIds:['bv_5_a1','bv_5_a2','bv_5_a3'], isFinalChallenge:false },
+    { id:'bv_final', worldId:'world_bv', order:6, title:'Repte final', instructions:'Corregeix el text final del món.', activityIds:['bv_f_a1','bv_f_a2','bv_f_a3'], isFinalChallenge:true },
+    // G/J
+    { id:'gj_1', worldId:'world_gj', order:1, title:'Paraules bàsiques', instructions:'Completa i tria la forma correcta.', activityIds:['gj_1_a1','gj_1_a2','gj_1_a3'], isFinalChallenge:false },
+    { id:'gj_2', worldId:'world_gj', order:2, title:'Consolidació', instructions:'Practica més paraules amb g i j.', activityIds:['gj_2_a1','gj_2_a2','gj_2_a3'], isFinalChallenge:false },
+    { id:'gj_3', worldId:'world_gj', order:3, title:'G i J en frases curtes', instructions:'Aplica g i j dins de frases simples.', activityIds:['gj_3_a1','gj_3_a2','gj_3_a3'], isFinalChallenge:false },
+    { id:'gj_4', worldId:'world_gj', order:4, title:'Detectem errors', instructions:'Localitza errors ortogràfics.', activityIds:['gj_4_a1','gj_4_a2','gj_4_a3'], isFinalChallenge:false },
+    { id:'gj_5', worldId:'world_gj', order:5, title:'Barreja final', instructions:'Consolida tot el que has après.', activityIds:['gj_5_a1','gj_5_a2','gj_5_a3'], isFinalChallenge:false },
+    { id:'gj_final', worldId:'world_gj', order:6, title:'Repte final', instructions:'Corregeix el text final del món.', activityIds:['gj_f_a1','gj_f_a2','gj_f_a3'], isFinalChallenge:true },
+    // Accents
+    { id:'acc_1', worldId:'world_accents', order:1, title:'Veiem l’accent', instructions:'Detecta paraules amb accent.', activityIds:['acc_1_a1','acc_1_a2','acc_1_a3'], isFinalChallenge:false },
+    { id:'acc_2', worldId:'world_accents', order:2, title:'Paraules habituals amb accent', instructions:'Consolida paraules freqüents accentuades.', activityIds:['acc_2_a1','acc_2_a2','acc_2_a3'], isFinalChallenge:false },
+    { id:'acc_3', worldId:'world_accents', order:3, title:'Accents en frases curtes', instructions:'Aplica accents dins de frases simples.', activityIds:['acc_3_a1','acc_3_a2','acc_3_a3'], isFinalChallenge:false },
+    { id:'acc_4', worldId:'world_accents', order:4, title:'Detectem errors', instructions:'Localitza accents que falten.', activityIds:['acc_4_a1','acc_4_a2','acc_4_a3'], isFinalChallenge:false },
+    { id:'acc_5', worldId:'world_accents', order:5, title:'Barreja final', instructions:'Consolida tot el que has après.', activityIds:['acc_5_a1','acc_5_a2','acc_5_a3'], isFinalChallenge:false },
+    { id:'acc_final', worldId:'world_accents', order:6, title:'Repte final', instructions:'Corregeix el text final del món.', activityIds:['acc_f_a1','acc_f_a2','acc_f_a3'], isFinalChallenge:true }
+  ];
+
+  const ACTIVITIES = [
+    // B/V
+    { id:'bv_1_a1', levelId:'bv_1', type:'fillLetter', prompt:'Completa la paraula.', question:'_icicleta', options:['b','v'], correctAnswer:'b', correction:'bicicleta', correctFeedback:'Molt bé! És bicicleta.', incorrectFeedback:'Compte. S’escriu bicicleta, amb b.' },
+    { id:'bv_1_a2', levelId:'bv_1', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['bicicleta','vicicleta'], correctAnswer:'bicicleta', correction:null, correctFeedback:'Correcte! Bicicleta va amb b.', incorrectFeedback:'Revisa-ho. La forma correcta és bicicleta.' },
+    { id:'bv_1_a3', levelId:'bv_1', type:'fillLetter', prompt:'Completa la paraula.', question:'_aixell', options:['b','v'], correctAnswer:'v', correction:'vaixell', correctFeedback:'Molt bé! És vaixell.', incorrectFeedback:'Compte. S’escriu vaixell, amb v.' },
+    { id:'bv_2_a1', levelId:'bv_2', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['balcó','valcó'], correctAnswer:'balcó', correction:null, correctFeedback:'Correcte! És balcó.', incorrectFeedback:'Revisa-ho. La forma correcta és balcó.' },
+    { id:'bv_2_a2', levelId:'bv_2', type:'fillLetter', prompt:'Completa la paraula.', question:'_ermell', options:['b','v'], correctAnswer:'v', correction:'vermell', correctFeedback:'Molt bé! És vermell.', incorrectFeedback:'Compte. S’escriu vermell, amb v.' },
+    { id:'bv_2_a3', levelId:'bv_2', type:'findError', prompt:'Caça l’error.', question:'Tinc una vicicleta nova.', options:['Tinc','una','vicicleta','nova'], correctAnswer:'vicicleta', correction:'bicicleta', correctFeedback:'Correcte! L’error és vicicleta.', incorrectFeedback:'L’error és vicicleta. La forma correcta és bicicleta.' },
+    { id:'bv_3_a1', levelId:'bv_3', type:'fillLetter', prompt:'Completa la frase.', question:'La _aca menja herba.', options:['b','v'], correctAnswer:'v', correction:'La vaca menja herba.', correctFeedback:'Molt bé! És vaca.', incorrectFeedback:'Compte. S’escriu vaca, amb v.' },
+    { id:'bv_3_a2', levelId:'bv_3', type:'chooseOption', prompt:'Tria la frase correcta.', question:'Quina frase està ben escrita?', options:['L’avió vola alt.','L’abió vola alt.'], correctAnswer:'L’avió vola alt.', correction:null, correctFeedback:'Correcte! Avió s’escriu amb v.', incorrectFeedback:'Revisa-ho. La frase correcta és L’avió vola alt.' },
+    { id:'bv_3_a3', levelId:'bv_3', type:'findError', prompt:'Caça l’error.', question:'La baca corre pel camp.', options:['La','baca','corre','pel','camp'], correctAnswer:'baca', correction:'vaca', correctFeedback:'Correcte! L’error és baca.', incorrectFeedback:'L’error és baca. La forma correcta és vaca.' },
+    { id:'bv_4_a1', levelId:'bv_4', type:'findError', prompt:'Caça l’error.', question:'Tinc una vicicleta vermella.', options:['Tinc','una','vicicleta','vermella'], correctAnswer:'vicicleta', correction:'bicicleta', correctFeedback:'Correcte! Has trobat l’error.', incorrectFeedback:'L’error és vicicleta. La forma correcta és bicicleta.' },
+    { id:'bv_4_a2', levelId:'bv_4', type:'findError', prompt:'Caça l’error.', question:'Veig un baixell al mar.', options:['Veig','un','baixell','al','mar'], correctAnswer:'baixell', correction:'vaixell', correctFeedback:'Correcte! Has trobat l’error.', incorrectFeedback:'L’error és baixell. La forma correcta és vaixell.' },
+    { id:'bv_4_a3', levelId:'bv_4', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['vespre','bespre'], correctAnswer:'vespre', correction:null, correctFeedback:'Correcte! És vespre.', incorrectFeedback:'Revisa-ho. La forma correcta és vespre.' },
+    { id:'bv_5_a1', levelId:'bv_5', type:'fillLetter', prompt:'Completa la frase.', question:'La _iblioteca és oberta.', options:['b','v'], correctAnswer:'b', correction:'La biblioteca és oberta.', correctFeedback:'Molt bé! És biblioteca.', incorrectFeedback:'Compte. S’escriu biblioteca, amb b.' },
+    { id:'bv_5_a2', levelId:'bv_5', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['volcà','bolcà'], correctAnswer:'volcà', correction:null, correctFeedback:'Correcte! És volcà.', incorrectFeedback:'Revisa-ho. La forma correcta és volcà.' },
+    { id:'bv_5_a3', levelId:'bv_5', type:'findError', prompt:'Caça l’error.', question:'El bolcà és molt alt.', options:['El','bolcà','és','molt','alt'], correctAnswer:'bolcà', correction:'volcà', correctFeedback:'Correcte! L’error és bolcà.', incorrectFeedback:'L’error és bolcà. La forma correcta és volcà.' },
+    { id:'bv_f_a1', levelId:'bv_final', type:'findError', prompt:'Troba l’error al text.', question:'La baca veu un baixell des del valcó.', options:['baca','baixell','valcó'], correctAnswer:'baca', correction:'vaca', correctFeedback:'Correcte! El primer error és baca.', incorrectFeedback:'El primer error que toca corregir és baca → vaca.' },
+    { id:'bv_f_a2', levelId:'bv_final', type:'findError', prompt:'Troba l’error al text.', question:'La baca veu un baixell des del valcó.', options:['baca','baixell','valcó'], correctAnswer:'baixell', correction:'vaixell', correctFeedback:'Correcte! El segon error és baixell.', incorrectFeedback:'Ara toca corregir baixell → vaixell.' },
+    { id:'bv_f_a3', levelId:'bv_final', type:'findError', prompt:'Troba l’error al text.', question:'La baca veu un baixell des del valcó.', options:['baca','baixell','valcó'], correctAnswer:'valcó', correction:'balcó', correctFeedback:'Correcte! El tercer error és valcó.', incorrectFeedback:'Ara toca corregir valcó → balcó.' },
+
+    // G/J
+    { id:'gj_1_a1', levelId:'gj_1', type:'fillLetter', prompt:'Completa la paraula.', question:'_irafa', options:['g','j'], correctAnswer:'g', correction:'girafa', correctFeedback:'Molt bé! És girafa.', incorrectFeedback:'Compte. S’escriu girafa, amb g.' },
+    { id:'gj_1_a2', levelId:'gj_1', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['girafa','jirafa'], correctAnswer:'girafa', correction:null, correctFeedback:'Correcte! És girafa.', incorrectFeedback:'Revisa-ho. La forma correcta és girafa.' },
+    { id:'gj_1_a3', levelId:'gj_1', type:'fillLetter', prompt:'Completa la paraula.', question:'_oguina', options:['g','j'], correctAnswer:'j', correction:'joguina', correctFeedback:'Molt bé! És joguina.', incorrectFeedback:'Compte. S’escriu joguina, amb j.' },
+    { id:'gj_2_a1', levelId:'gj_2', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['jersei','gersei'], correctAnswer:'jersei', correction:null, correctFeedback:'Correcte! És jersei.', incorrectFeedback:'Revisa-ho. La forma correcta és jersei.' },
+    { id:'gj_2_a2', levelId:'gj_2', type:'fillLetter', prompt:'Completa la paraula.', question:'_imnàs', options:['g','j'], correctAnswer:'g', correction:'gimnàs', correctFeedback:'Molt bé! És gimnàs.', incorrectFeedback:'Compte. S’escriu gimnàs, amb g.' },
+    { id:'gj_2_a3', levelId:'gj_2', type:'findError', prompt:'Caça l’error.', question:'El gersei és verd.', options:['El','gersei','és','verd'], correctAnswer:'gersei', correction:'jersei', correctFeedback:'Correcte! L’error és gersei.', incorrectFeedback:'L’error és gersei. La forma correcta és jersei.' },
+    { id:'gj_3_a1', levelId:'gj_3', type:'fillLetter', prompt:'Completa la frase.', question:'La _irafa menja fulles.', options:['g','j'], correctAnswer:'g', correction:'La girafa menja fulles.', correctFeedback:'Molt bé! És girafa.', incorrectFeedback:'Compte. S’escriu girafa, amb g.' },
+    { id:'gj_3_a2', levelId:'gj_3', type:'chooseOption', prompt:'Tria la frase correcta.', question:'Quina frase està ben escrita?', options:['La joguina és nova.','La goguina és nova.'], correctAnswer:'La joguina és nova.', correction:null, correctFeedback:'Correcte! Joguina s’escriu amb j.', incorrectFeedback:'Revisa-ho. La frase correcta és La joguina és nova.' },
+    { id:'gj_3_a3', levelId:'gj_3', type:'findError', prompt:'Caça l’error.', question:'Tinc una goguina nova.', options:['Tinc','una','goguina','nova'], correctAnswer:'goguina', correction:'joguina', correctFeedback:'Correcte! L’error és goguina.', incorrectFeedback:'L’error és goguina. La forma correcta és joguina.' },
+    { id:'gj_4_a1', levelId:'gj_4', type:'findError', prompt:'Caça l’error.', question:'La jirafa corre.', options:['La','jirafa','corre'], correctAnswer:'jirafa', correction:'girafa', correctFeedback:'Correcte! L’error és jirafa.', incorrectFeedback:'L’error és jirafa. La forma correcta és girafa.' },
+    { id:'gj_4_a2', levelId:'gj_4', type:'findError', prompt:'Caça l’error.', question:'Vaig al jimnàs.', options:['Vaig','al','jimnàs'], correctAnswer:'jimnàs', correction:'gimnàs', correctFeedback:'Correcte! L’error és jimnàs.', incorrectFeedback:'L’error és jimnàs. La forma correcta és gimnàs.' },
+    { id:'gj_4_a3', levelId:'gj_4', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['gegant','jegant'], correctAnswer:'gegant', correction:null, correctFeedback:'Correcte! És gegant.', incorrectFeedback:'Revisa-ho. La forma correcta és gegant.' },
+    { id:'gj_5_a1', levelId:'gj_5', type:'fillLetter', prompt:'Completa la frase.', question:'La _aqueta és al penjador.', options:['g','j'], correctAnswer:'j', correction:'La jaqueta és al penjador.', correctFeedback:'Molt bé! És jaqueta.', incorrectFeedback:'Compte. S’escriu jaqueta, amb j.' },
+    { id:'gj_5_a2', levelId:'gj_5', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['gimnàs','jimnàs'], correctAnswer:'gimnàs', correction:null, correctFeedback:'Correcte! És gimnàs.', incorrectFeedback:'Revisa-ho. La forma correcta és gimnàs.' },
+    { id:'gj_5_a3', levelId:'gj_5', type:'findError', prompt:'Caça l’error.', question:'La gaqueta és al penjador.', options:['La','gaqueta','és','al','penjador'], correctAnswer:'gaqueta', correction:'jaqueta', correctFeedback:'Correcte! L’error és gaqueta.', incorrectFeedback:'L’error és gaqueta. La forma correcta és jaqueta.' },
+    { id:'gj_f_a1', levelId:'gj_final', type:'findError', prompt:'Troba l’error al text.', question:'La jirafa és al gerdí. El jegant porta una gaqueta i menja un jelat.', options:['jirafa','gerdí','jegant','gaqueta','jelat'], correctAnswer:'jirafa', correction:'girafa', correctFeedback:'Correcte! El primer error és jirafa.', incorrectFeedback:'El primer error que toca corregir és jirafa → girafa.' },
+    { id:'gj_f_a2', levelId:'gj_final', type:'findError', prompt:'Troba l’error al text.', question:'La jirafa és al gerdí. El jegant porta una gaqueta i menja un jelat.', options:['jirafa','gerdí','jegant','gaqueta','jelat'], correctAnswer:'gerdí', correction:'jardí', correctFeedback:'Correcte! El segon error és gerdí.', incorrectFeedback:'Ara toca corregir gerdí → jardí.' },
+    { id:'gj_f_a3', levelId:'gj_final', type:'findError', prompt:'Troba l’error al text.', question:'La jirafa és al gerdí. El jegant porta una gaqueta i menja un jelat.', options:['jirafa','gerdí','jegant','gaqueta','jelat'], correctAnswer:'jegant', correction:'gegant', correctFeedback:'Correcte! El tercer error és jegant.', incorrectFeedback:'Ara toca corregir jegant → gegant.' },
+
+    // Accents
+    { id:'acc_1_a1', levelId:'acc_1', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['camió','camio'], correctAnswer:'camió', correction:null, correctFeedback:'Correcte! És camió.', incorrectFeedback:'Revisa-ho. La forma correcta és camió.' },
+    { id:'acc_1_a2', levelId:'acc_1', type:'fillLetter', prompt:'Completa la paraula.', question:'cafe_', options:['è','e'], correctAnswer:'è', correction:'cafè', correctFeedback:'Molt bé! És cafè.', incorrectFeedback:'Compte. S’escriu cafè, amb accent.' },
+    { id:'acc_1_a3', levelId:'acc_1', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['mà','ma'], correctAnswer:'mà', correction:null, correctFeedback:'Correcte! És mà.', incorrectFeedback:'Revisa-ho. La forma correcta és mà.' },
+    { id:'acc_2_a1', levelId:'acc_2', type:'fillLetter', prompt:'Completa la paraula.', question:'avi_', options:['ó','o'], correctAnswer:'ó', correction:'avió', correctFeedback:'Molt bé! És avió.', incorrectFeedback:'Compte. S’escriu avió, amb accent.' },
+    { id:'acc_2_a2', levelId:'acc_2', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['també','tambe'], correctAnswer:'també', correction:null, correctFeedback:'Correcte! És també.', incorrectFeedback:'Revisa-ho. La forma correcta és també.' },
+    { id:'acc_2_a3', levelId:'acc_2', type:'findError', prompt:'Caça l’error.', question:'El camio és gran.', options:['El','camio','és','gran'], correctAnswer:'camio', correction:'camió', correctFeedback:'Correcte! L’error és camio.', incorrectFeedback:'L’error és camio. La forma correcta és camió.' },
+    { id:'acc_3_a1', levelId:'acc_3', type:'fillLetter', prompt:'Completa la frase.', question:'L’_vió vola alt.', options:['a','à'], correctAnswer:'a', correction:'L’avió vola alt.', correctFeedback:'Molt bé! És avió.', incorrectFeedback:'Compte. La frase correcta és L’avió vola alt.' },
+    { id:'acc_3_a2', levelId:'acc_3', type:'chooseOption', prompt:'Tria la frase correcta.', question:'Quina frase està ben escrita?', options:['També vindré.','Tambe vindré.'], correctAnswer:'També vindré.', correction:null, correctFeedback:'Correcte! També porta accent.', incorrectFeedback:'Revisa-ho. La frase correcta és També vindré.' },
+    { id:'acc_3_a3', levelId:'acc_3', type:'findError', prompt:'Caça l’error.', question:'El balco és obert.', options:['El','balco','és','obert'], correctAnswer:'balco', correction:'balcó', correctFeedback:'Correcte! L’error és balco.', incorrectFeedback:'L’error és balco. La forma correcta és balcó.' },
+    { id:'acc_4_a1', levelId:'acc_4', type:'findError', prompt:'Caça l’error.', question:'La musica sona bé.', options:['La','musica','sona','bé'], correctAnswer:'musica', correction:'música', correctFeedback:'Correcte! L’error és musica.', incorrectFeedback:'L’error és musica. La forma correcta és música.' },
+    { id:'acc_4_a2', levelId:'acc_4', type:'findError', prompt:'Caça l’error.', question:'Aixo no és meu.', options:['Aixo','no','és','meu'], correctAnswer:'Aixo', correction:'Això', correctFeedback:'Correcte! L’error és Aixo.', incorrectFeedback:'L’error és Aixo. La forma correcta és Això.' },
+    { id:'acc_4_a3', levelId:'acc_4', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['balcó','balco'], correctAnswer:'balcó', correction:null, correctFeedback:'Correcte! És balcó.', incorrectFeedback:'Revisa-ho. La forma correcta és balcó.' },
+    { id:'acc_5_a1', levelId:'acc_5', type:'fillLetter', prompt:'Completa la frase.', question:'La _úsica sona fort.', options:['m','n'], correctAnswer:'m', correction:'La música sona fort.', correctFeedback:'Molt bé! És música.', incorrectFeedback:'Compte. La forma correcta és música.' },
+    { id:'acc_5_a2', levelId:'acc_5', type:'chooseOption', prompt:'Tria l’opció correcta.', question:'Quina paraula està ben escrita?', options:['això','aixo'], correctAnswer:'això', correction:null, correctFeedback:'Correcte! És això.', incorrectFeedback:'Revisa-ho. La forma correcta és això.' },
+    { id:'acc_5_a3', levelId:'acc_5', type:'findError', prompt:'Caça l’error.', question:'La musica comença ara.', options:['La','musica','comença','ara'], correctAnswer:'musica', correction:'música', correctFeedback:'Correcte! L’error és musica.', incorrectFeedback:'L’error és musica. La forma correcta és música.' },
+    { id:'acc_f_a1', levelId:'acc_final', type:'findError', prompt:'Troba l’error al text.', question:'L’avio porta musica i cafe. Tambe arriba un camio amb melo.', options:['avio','musica','cafe','Tambe','camio','melo'], correctAnswer:'avio', correction:'avió', correctFeedback:'Correcte! El primer error és avio.', incorrectFeedback:'El primer error que toca corregir és avio → avió.' },
+    { id:'acc_f_a2', levelId:'acc_final', type:'findError', prompt:'Troba l’error al text.', question:'L’avio porta musica i cafe. Tambe arriba un camio amb melo.', options:['avio','musica','cafe','Tambe','camio','melo'], correctAnswer:'musica', correction:'música', correctFeedback:'Correcte! El segon error és musica.', incorrectFeedback:'Ara toca corregir musica → música.' },
+    { id:'acc_f_a3', levelId:'acc_final', type:'findError', prompt:'Troba l’error al text.', question:'L’avio porta musica i cafe. Tambe arriba un camio amb melo.', options:['avio','musica','cafe','Tambe','camio','melo'], correctAnswer:'cafe', correction:'cafè', correctFeedback:'Correcte! El tercer error és cafe.', incorrectFeedback:'Ara toca corregir cafe → cafè.' }
+  ];
+
+  const state = {
+    currentScreen: 'profiles',
+    currentWorldId: null,
+    currentLevelId: null,
+    game: null,
+    editingProfileId: null,
+  };
+
+  const $ = (sel) => document.querySelector(sel);
+  const screens = {
+    profiles: $('#screen-profiles'),
+    map: $('#screen-map'),
+    levels: $('#screen-levels'),
+    game: $('#screen-game'),
+    results: $('#screen-results')
+  };
+
+  const backBtn = $('#backBtn');
+  const homeBtn = $('#homeBtn');
+  const profileModal = $('#profileModal');
+  const profileModalTitle = $('#profileModalTitle');
+  const profileNameInput = $('#profileName');
+  const profileNameError = $('#profileNameError');
+  const avatarGrid = $('#avatarGrid');
+  const saveProfileBtn = $('#saveProfileBtn');
+  const cancelProfileModal = $('#cancelProfileModal');
+  const closeProfileModal = $('#closeProfileModal');
+
+  function loadProfiles() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.profiles) || '[]'); }
+    catch { return []; }
+  }
+  function saveProfiles(profiles) { localStorage.setItem(STORAGE_KEYS.profiles, JSON.stringify(profiles)); }
+  function getActiveProfileId() { return localStorage.getItem(STORAGE_KEYS.activeProfileId); }
+  function setActiveProfileId(id) { localStorage.setItem(STORAGE_KEYS.activeProfileId, id); }
+  function clearActiveProfileId() { localStorage.removeItem(STORAGE_KEYS.activeProfileId); }
+  function progressKey(profileId) { return STORAGE_KEYS.progressPrefix + profileId; }
+  function loadProgress(profileId) {
+    try { return JSON.parse(localStorage.getItem(progressKey(profileId)) || 'null'); }
+    catch { return null; }
+  }
+  function saveProgress(profileId, progress) { localStorage.setItem(progressKey(profileId), JSON.stringify(progress)); }
+  function defaultProgress(profileId) {
+    return {
+      profileId,
+      unlockedWorldIds: ['world_bv'],
+      completedLevelIds: [],
+      bestStarsByLevel: {},
+      coins: 0,
+      lastWorldId: null,
+      lastLevelId: null,
+      skillProgress: { bv: 0, gj: 0, accents: 0 }
+    };
+  }
+  function getOrCreateProgress(profileId) {
+    let p = loadProgress(profileId);
+    if (!p) {
+      p = defaultProgress(profileId);
+      saveProgress(profileId, p);
+    }
+    return p;
+  }
+  function deleteProgress(profileId) { localStorage.removeItem(progressKey(profileId)); }
+  function getActiveProfile() {
+    const id = getActiveProfileId();
+    if (!id) return null;
+    return loadProfiles().find(p => p.id === id) || null;
+  }
+  function profileAvatar(profile) { return AVATARS[profile.avatarId] || '🙂'; }
+  function worldById(id) { return WORLDS.find(w => w.id === id); }
+  function levelsForWorld(worldId) { return LEVELS.filter(l => l.worldId === worldId).sort((a,b) => a.order - b.order); }
+  function activitiesForLevel(levelId) { return ACTIVITIES.filter(a => a.levelId === levelId).sort((a,b) => a.id.localeCompare(b.id)); }
+  function totalStars(progress) { return Object.values(progress.bestStarsByLevel || {}).reduce((a,b) => a + b, 0); }
+  function isWorldUnlocked(progress, worldId) { return progress.unlockedWorldIds.includes(worldId); }
+  function isLevelUnlocked(levels, progress, level) {
+    if (level.order === 1) return true;
+    if (level.isFinalChallenge) {
+      const regular = levels.filter(l => !l.isFinalChallenge);
+      return regular.every(l => progress.completedLevelIds.includes(l.id));
+    }
+    const prev = levels.find(l => l.order === level.order - 1);
+    return !!prev && progress.completedLevelIds.includes(prev.id);
+  }
+  function starsForLevel(progress, levelId) { return progress.bestStarsByLevel[levelId] || 0; }
+  function calculateStars(wrongAnswers) { return wrongAnswers === 0 ? 3 : wrongAnswers === 1 ? 2 : 1; }
+  function calculateCoins(stars) { return stars === 3 ? 15 : 10; }
+  function nowIso() { return new Date().toISOString(); }
+  function uid() { return 'profile_' + Math.random().toString(36).slice(2, 10); }
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>'"]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[s]));
+  }
+
+  function switchScreen(name) {
+    Object.entries(screens).forEach(([key, el]) => el.classList.toggle('active', key === name));
+    state.currentScreen = name;
+    updateNavButtons();
+  }
+
+  function updateNavButtons() {
+    const showBack = state.currentScreen === 'map' || state.currentScreen === 'levels' || state.currentScreen === 'game' || state.currentScreen === 'results';
+    const showHome = state.currentScreen !== 'profiles';
+    backBtn.classList.toggle('hidden', !showBack);
+    homeBtn.classList.toggle('hidden', !showHome);
+  }
+
+  function backAction() {
+    if (state.currentScreen === 'map') renderProfilesScreen();
+    else if (state.currentScreen === 'levels') renderMapScreen();
+    else if (state.currentScreen === 'game') renderLevelsScreen(state.currentWorldId);
+    else if (state.currentScreen === 'results') renderLevelsScreen(state.currentWorldId);
+  }
+
+  backBtn.addEventListener('click', backAction);
+  homeBtn.addEventListener('click', () => renderProfilesScreen());
+
+  function openProfileModal(profile = null) {
+    state.editingProfileId = profile ? profile.id : null;
+    profileModalTitle.textContent = profile ? 'Editar perfil' : 'Nou perfil';
+    profileNameInput.value = profile ? profile.name : '';
+    profileNameError.textContent = '';
+    profileNameError.classList.add('hidden');
+    renderAvatarChoices(profile ? profile.avatarId : 'drac_blau');
+    profileModal.classList.add('active');
+    setTimeout(() => profileNameInput.focus(), 30);
+  }
+  function closeProfileModalFn() { profileModal.classList.remove('active'); }
+  cancelProfileModal.addEventListener('click', closeProfileModalFn);
+  closeProfileModal.addEventListener('click', closeProfileModalFn);
+  profileModal.addEventListener('click', (e) => { if (e.target === profileModal) closeProfileModalFn(); });
+
+  function renderAvatarChoices(selectedId) {
+    avatarGrid.innerHTML = Object.entries(AVATARS).map(([id, emoji]) => `
+      <button type="button" class="avatar-choice ${id === selectedId ? 'selected' : ''}" data-avatar-id="${id}">
+        <div>${emoji}</div>
+        <div style="font-size:.85rem; margin-top:6px;">${escapeHtml(id.replaceAll('_', ' '))}</div>
+      </button>
+    `).join('');
+  }
+
+  avatarGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.avatar-choice');
+    if (!btn) return;
+    avatarGrid.querySelectorAll('.avatar-choice').forEach(el => el.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+
+  saveProfileBtn.addEventListener('click', () => {
+    const rawName = profileNameInput.value.trim();
+    const avatarSelected = avatarGrid.querySelector('.avatar-choice.selected')?.dataset.avatarId || 'drac_blau';
+    if (!rawName) {
+      profileNameError.textContent = 'Has d’escriure un nom.';
+      profileNameError.classList.remove('hidden');
+      return;
+    }
+    if (rawName.length > 20) {
+      profileNameError.textContent = 'El nom no pot superar els 20 caràcters.';
+      profileNameError.classList.remove('hidden');
+      return;
+    }
+    profileNameError.classList.add('hidden');
+
+    const profiles = loadProfiles();
+    if (state.editingProfileId) {
+      const idx = profiles.findIndex(p => p.id === state.editingProfileId);
+      if (idx >= 0) {
+        profiles[idx] = { ...profiles[idx], name: rawName, avatarId: avatarSelected, lastPlayedAt: nowIso() };
+        saveProfiles(profiles);
+      }
+    } else {
+      const profile = {
+        id: uid(),
+        name: rawName,
+        avatarId: avatarSelected,
+        createdAt: nowIso(),
+        lastPlayedAt: nowIso()
+      };
+      profiles.push(profile);
+      saveProfiles(profiles);
+      setActiveProfileId(profile.id);
+      getOrCreateProgress(profile.id);
+    }
+    closeProfileModalFn();
+    renderProfilesScreen();
+  });
+
+  function renderProfilesScreen() {
+    const profiles = loadProfiles().sort((a,b) => new Date(b.lastPlayedAt) - new Date(a.lastPlayedAt));
+    const activeId = getActiveProfileId();
+    screens.profiles.innerHTML = `
+      <div class="card hero">
+        <h1>Tria o crea un perfil</h1>
+        <p class="muted">Cada perfil guarda el seu progrés al mateix navegador. És la manera més simple i gratuïta de fer funcionar OrtogràfiCat.</p>
+        <div class="row">
+          <button id="newProfileBtn" class="btn">+ Nou perfil</button>
+        </div>
+      </div>
+      <div class="space"></div>
+      ${profiles.length === 0 ? `
+        <div class="card empty">
+          <h2>Encara no hi ha cap perfil creat.</h2>
+          <div class="space"></div>
+          <p class="muted">Crea’n un per començar a jugar.</p>
+          <div class="space"></div>
+          <button id="emptyCreateBtn" class="btn">Crear perfil</button>
+        </div>
+      ` : `
+        <div class="grid profiles">
+          ${profiles.map(profile => `
+            <div class="profile-card">
+              <div class="profile-head">
+                <div class="avatar">${profileAvatar(profile)}</div>
+                <div class="actions-inline">
+                  <button class="btn secondary" data-edit-profile="${profile.id}">Editar</button>
+                  <button class="btn danger" data-delete-profile="${profile.id}">Eliminar</button>
+                </div>
+              </div>
+              <div>
+                <h3>${escapeHtml(profile.name)}</h3>
+                <div class="space"></div>
+                <div class="${profile.id === activeId ? 'active-badge' : 'muted'}">${profile.id === activeId ? 'Perfil actiu' : 'Toca per seleccionar-lo'}</div>
+              </div>
+              <div class="actions-inline">
+                <button class="btn ${profile.id === activeId ? 'secondary' : ''}" data-select-profile="${profile.id}">${profile.id === activeId ? 'Continuar' : 'Seleccionar'}</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    `;
+    switchScreen('profiles');
+    $('#newProfileBtn')?.addEventListener('click', () => openProfileModal());
+    $('#emptyCreateBtn')?.addEventListener('click', () => openProfileModal());
+    screens.profiles.querySelectorAll('[data-edit-profile]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const profile = profiles.find(p => p.id === btn.dataset.editProfile);
+        if (profile) openProfileModal(profile);
+      });
+    });
+    screens.profiles.querySelectorAll('[data-delete-profile]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.deleteProfile;
+        const profile = profiles.find(p => p.id === id);
+        if (!profile) return;
+        if (!confirm(`Vols eliminar el perfil "${profile.name}"? També s'esborrarà el seu progrés.`)) return;
+        const updated = profiles.filter(p => p.id !== id);
+        saveProfiles(updated);
+        deleteProgress(id);
+        if (getActiveProfileId() === id) {
+          if (updated[0]) setActiveProfileId(updated[0].id);
+          else clearActiveProfileId();
+        }
+        renderProfilesScreen();
+      });
+    });
+    screens.profiles.querySelectorAll('[data-select-profile]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.selectProfile;
+        const updatedProfiles = profiles.map(p => p.id === id ? { ...p, lastPlayedAt: nowIso() } : p);
+        saveProfiles(updatedProfiles);
+        setActiveProfileId(id);
+        getOrCreateProgress(id);
+        renderMapScreen();
+      });
+    });
+  }
+
+  function renderMapScreen() {
+    const profile = getActiveProfile();
+    if (!profile) return renderProfilesScreen();
+    const progress = getOrCreateProgress(profile.id);
+    screens.map.innerHTML = `
+      <div class="card summary">
+        <h1>Hola, ${escapeHtml(profile.name)}</h1>
+        <p class="muted">Tria un món per continuar l’aventura ortogràfica.</p>
+        <div class="stats">
+          <div class="pill">⭐ ${totalStars(progress)} estrelles</div>
+          <div class="pill">🪙 ${progress.coins} monedes</div>
+        </div>
+      </div>
+      <div class="space"></div>
+      <div class="grid worlds">
+        ${WORLDS.map(world => {
+          const unlocked = isWorldUnlocked(progress, world.id);
+          return `
+            <div class="world-card ${unlocked ? '' : 'locked'}">
+              <div class="world-head">
+                <div class="row" style="align-items:center;">
+                  <div class="avatar">${world.emoji}</div>
+                  <div>
+                    <h3>${escapeHtml(world.title)}</h3>
+                    <div class="space"></div>
+                    <p class="muted">${escapeHtml(world.description)}</p>
+                  </div>
+                </div>
+                <div class="flag">${unlocked ? '➡️' : '🔒'}</div>
+              </div>
+              <div class="actions-inline">
+                <button class="btn ${unlocked ? '' : 'secondary'}" data-open-world="${world.id}">${unlocked ? 'Entrar al món' : 'Bloquejat'}</button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+    switchScreen('map');
+    screens.map.querySelectorAll('[data-open-world]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const worldId = btn.dataset.openWorld;
+        if (!isWorldUnlocked(progress, worldId)) {
+          alert('Completa el món anterior per desbloquejar-lo.');
+          return;
+        }
+        renderLevelsScreen(worldId);
+      });
+    });
+  }
+
+  function renderLevelsScreen(worldId) {
+    const profile = getActiveProfile();
+    if (!profile) return renderProfilesScreen();
+    const progress = getOrCreateProgress(profile.id);
+    const world = worldById(worldId);
+    if (!world) return renderMapScreen();
+    const levels = levelsForWorld(worldId);
+    state.currentWorldId = worldId;
+    screens.levels.innerHTML = `
+      <div class="card summary">
+        <h1>${world.emoji} ${escapeHtml(world.title)}</h1>
+        <p class="muted">${escapeHtml(world.description)}</p>
+        <div class="stats">
+          <div class="pill">Jugador: ${escapeHtml(profile.name)}</div>
+          <div class="pill">Nivells completats: ${levels.filter(l => progress.completedLevelIds.includes(l.id)).length}/${levels.length}</div>
+        </div>
+      </div>
+      <div class="space"></div>
+      <div class="grid levels">
+        ${levels.map(level => {
+          const unlocked = isLevelUnlocked(levels, progress, level);
+          const stars = starsForLevel(progress, level.id);
+          return `
+            <div class="level-card ${unlocked ? '' : 'locked'}">
+              <div class="level-head">
+                <div class="row" style="align-items:center;">
+                  <div class="avatar">${level.isFinalChallenge ? '🏁' : level.order}</div>
+                  <div>
+                    <h3>${escapeHtml(level.title)}</h3>
+                    <div class="space"></div>
+                    <p class="muted">${escapeHtml(level.instructions)}</p>
+                  </div>
+                </div>
+                <div class="stars">${'⭐'.repeat(stars)}</div>
+              </div>
+              <div class="actions-inline">
+                <button class="btn ${unlocked ? '' : 'secondary'}" data-open-level="${level.id}">${unlocked ? 'Jugar nivell' : 'Bloquejat'}</button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+    switchScreen('levels');
+    screens.levels.querySelectorAll('[data-open-level]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const levelId = btn.dataset.openLevel;
+        const level = levels.find(l => l.id === levelId);
+        if (!level) return;
+        if (!isLevelUnlocked(levels, progress, level)) {
+          alert('Completa el nivell anterior per desbloquejar-lo.');
+          return;
+        }
+        startGame(levelId);
+      });
+    });
+  }
+
+  function startGame(levelId) {
+    const profile = getActiveProfile();
+    if (!profile) return renderProfilesScreen();
+    const progress = getOrCreateProgress(profile.id);
+    const level = LEVELS.find(l => l.id === levelId);
+    const activities = activitiesForLevel(levelId);
+    if (!level || activities.length === 0) {
+      alert('No s’ha pogut carregar aquest nivell.');
+      return;
+    }
+    state.currentLevelId = levelId;
+    state.game = {
+      profile,
+      progress,
+      level,
+      activities,
+      index: 0,
+      correct: 0,
+      wrong: 0
+    };
+    renderGameScreen();
+  }
+
+  function renderGameScreen() {
+    const g = state.game;
+    if (!g) return renderLevelsScreen(state.currentWorldId);
+    const activity = g.activities[g.index];
+    const total = g.activities.length;
+    screens.game.innerHTML = `
+      <div class="card summary">
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <div>
+            <h2>${escapeHtml(g.level.title)}</h2>
+            <p class="muted">Jugador: ${escapeHtml(g.profile.name)}</p>
+          </div>
+          <div class="pill">Activitat ${g.index + 1} de ${total}</div>
+        </div>
+        <div class="space"></div>
+        <div class="progressbar"><span style="width:${((g.index + 1)/total)*100}%"></span></div>
+      </div>
+      <div class="space"></div>
+      <div class="card activity-card">
+        <p class="muted">${escapeHtml(activity.prompt)}</p>
+        <div class="space"></div>
+        <div class="question">${escapeHtml(activity.question)}</div>
+        <div class="options">
+          ${activity.options.map(option => `<button class="option-btn" data-answer="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join('')}
+        </div>
+      </div>
+    `;
+    switchScreen('game');
+    screens.game.querySelectorAll('[data-answer]').forEach(btn => {
+      btn.addEventListener('click', () => handleAnswer(btn.textContent));
+    });
+  }
+
+  function handleAnswer(answer) {
+    const g = state.game;
+    const activity = g.activities[g.index];
+    const correct = answer === activity.correctAnswer;
+    if (correct) g.correct++; else g.wrong++;
+
+    screens.game.innerHTML = `
+      <div class="card empty">
+        <h2 class="${correct ? 'feedback-good' : 'feedback-bad'}">${correct ? '✅ Correcte!' : '⚠️ Compte!'}</h2>
+        <div class="space"></div>
+        <p>${escapeHtml(correct ? activity.correctFeedback : activity.incorrectFeedback)}</p>
+        ${activity.correction ? `<div class="space"></div><p class="muted">Forma correcta: <strong>${escapeHtml(activity.correction)}</strong></p>` : ''}
+        <div class="space"></div>
+        <button id="continueAfterFeedback" class="btn">Continuar</button>
+      </div>
+    `;
+    switchScreen('game');
+    $('#continueAfterFeedback').addEventListener('click', () => {
+      if (g.index === g.activities.length - 1) finishLevel();
+      else {
+        g.index++;
+        renderGameScreen();
+      }
+    });
+  }
+
+  function finishLevel() {
+    const g = state.game;
+    const stars = calculateStars(g.wrong);
+    const coins = calculateCoins(stars);
+    const progress = getOrCreateProgress(g.profile.id);
+    const prevBest = progress.bestStarsByLevel[g.level.id] || 0;
+    const isNewBest = stars > prevBest;
+
+    if (!progress.completedLevelIds.includes(g.level.id)) progress.completedLevelIds.push(g.level.id);
+    if (stars > prevBest) progress.bestStarsByLevel[g.level.id] = stars;
+    progress.coins += coins;
+    progress.lastWorldId = g.level.worldId;
+    progress.lastLevelId = g.level.id;
+
+    if (g.level.id === 'bv_final' && !progress.unlockedWorldIds.includes('world_gj')) progress.unlockedWorldIds.push('world_gj');
+    if (g.level.id === 'gj_final' && !progress.unlockedWorldIds.includes('world_accents')) progress.unlockedWorldIds.push('world_accents');
+
+    saveProgress(g.profile.id, progress);
+
+    screens.results.innerHTML = `
+      <div class="card empty">
+        <h1>Resultat del nivell</h1>
+        <div class="space"></div>
+        <p class="stars" style="font-size:1.5rem;">${'⭐'.repeat(stars)}</p>
+        <div class="space"></div>
+        <p><strong>Encerts:</strong> ${g.correct}</p>
+        <p><strong>Errors:</strong> ${g.wrong}</p>
+        <p><strong>Monedes guanyades:</strong> ${coins}</p>
+        ${isNewBest ? '<div class="space"></div><p class="feedback-good">🎉 Nou millor resultat!</p>' : ''}
+        <div class="space"></div>
+        <div class="actions-inline" style="justify-content:center;">
+          <button id="repeatLevelBtn" class="btn secondary">Repetir</button>
+          <button id="backToLevelsBtn" class="btn">Tornar als nivells</button>
+        </div>
+      </div>
+    `;
+    switchScreen('results');
+    $('#repeatLevelBtn').addEventListener('click', () => startGame(g.level.id));
+    $('#backToLevelsBtn').addEventListener('click', () => renderLevelsScreen(g.level.worldId));
+  }
+
+  renderProfilesScreen();
+})();
+</script>
+</body>
+</html>
